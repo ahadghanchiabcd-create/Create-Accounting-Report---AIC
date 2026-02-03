@@ -26,11 +26,13 @@ def process_accounting_report(input_path, output_path):
     current_errors = []
     
     # Relaxed Regex patterns
+    # Relaxed Regex patterns
     txn_num_pattern = re.compile(r"Transaction Number", re.IGNORECASE)
-    # Relaxed to capture "Journal Entries Processed", "Journal Entry Processed" etc.
-    section_processed_pattern = re.compile(r"Journal Entr.*Processed", re.IGNORECASE)
+    # Relaxed to capture "Journal Entries", "Journal Entries Processed", etc.
+    # We use ^ to ensure it's at the start of the row data to avoid matching messages in the middle
+    section_processed_pattern = re.compile(r"^\s*Journal Entr.*", re.IGNORECASE)
     # Relaxed to capture "Journal Entries with Errors", "Journal Entry Errors", "Journal Entries Errored"
-    section_error_pattern = re.compile(r"Journal Entr.*Error", re.IGNORECASE)
+    section_error_pattern = re.compile(r"^\s*Journal Entr.*Error", re.IGNORECASE)
     
     rows = df.values.tolist()
     
@@ -85,17 +87,27 @@ def process_accounting_report(input_path, output_path):
         row_joined = " ".join(clean_cells)
         
         # 1. Detect Section Headers
+        # Exclusion keywords to avoid summary tables and "Total" rows triggering sections
+        exclusion_keywords = ["Event Class", "Number of documents", "Number of events", "Total for Journal Entry"]
+        is_summary_or_total = any(k.lower() in row_joined.lower() for k in exclusion_keywords)
+
         # We start with Error pattern check
         if section_error_pattern.search(row_joined):
+            if is_summary_or_total:
+                i += 1
+                continue
             flush_transaction()
-            print(f"Found Section: Error (Row {i+1})")
+            print(f"Found Section: Error (Row {i+1}): {row_joined}")
             current_section = 'Error'
             i += 1
             continue
             
         if section_processed_pattern.search(row_joined):
+            if is_summary_or_total:
+                i += 1
+                continue
             flush_transaction()
-            print(f"Found Section: Processed (Row {i+1})")
+            print(f"Found Section: Processed (Row {i+1}): {row_joined}")
             current_section = 'Processed'
             i += 1
             continue
