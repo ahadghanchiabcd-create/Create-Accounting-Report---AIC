@@ -4,7 +4,19 @@ import shutil
 import tempfile
 from process_accounting_report import process_accounting_report
 
-app = Flask(__name__)
+# Get absolute path for the templates folder
+base_dir = os.path.abspath(os.path.dirname(__file__))
+template_dir = os.path.join(base_dir, 'templates')
+
+app = Flask(__name__, template_folder=template_dir)
+
+# Debug: Print file structure on startup to Render logs
+print(f"DEBUG: App base directory: {base_dir}")
+print(f"DEBUG: Template directory: {template_dir}")
+if os.path.exists(template_dir):
+    print(f"DEBUG: Files in templates/: {os.listdir(template_dir)}")
+else:
+    print("DEBUG: CRITICAL ERROR: templates folder NOT FOUND!")
 
 @app.route('/')
 def index():
